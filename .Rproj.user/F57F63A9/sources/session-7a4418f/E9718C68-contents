@@ -1,0 +1,78 @@
+# Load pi digits from a text file
+load_pi_digits <- function(file_path = "data/pi.txt") {
+  if (!file.exists(file_path)) {
+    stop("File does not exist: ", file_path)
+  }
+  
+  digits_string <- readLines(file_path, warn = FALSE)  
+  digits_string <- paste0(digits_string, collapse = "")
+  digits_string <- gsub("[^0-9]", "", digits_string)
+  
+  digits <- as.numeric(unlist(strsplit(digits_string, "")))
+  
+  if (any(is.na(digits))) {
+    stop("NA values detected in digits after conversion. Check the file content.")
+  }
+  
+  # Ensure the length of digits is divisible by 3
+  length_to_cut <- length(digits) %% 3
+  if (length_to_cut != 0) {
+    digits <- digits[1:(length(digits) - length_to_cut)]
+  }
+  
+  return(digits)
+}
+
+calculate_tallest_middle_triplets <- function(digits) {
+  triplets <- matrix(digits, nrow = 3, byrow = FALSE)
+  Tobs <- sum(triplets[2,] > triplets[1,] & triplets[2,] > triplets[3,])
+  return(Tobs)
+}
+
+# Function to calculate Tobs
+calculate_tallest_middle_triplets <- function(digits) {
+  triplets <- matrix(digits, nrow = 3, byrow = FALSE)
+  Tobs <- sum(triplets[2,] > triplets[1,] & triplets[2,] > triplets[3,])
+  return(Tobs)
+}
+
+# Calculate Zobs using CLT
+calculate_zobs <- function(Tobs, n_triplets, p = 0.285) {
+  expected_T <- n_triplets * p
+  sd_T <- sqrt(n_triplets * p * (1 - p))
+  Zobs <- (Tobs - expected_T) / sd_T
+  return(Zobs)
+}
+
+# Permutation Test
+permutation_test <- function(n_triplets, Tobs, p = 0.285, num_simulations = 10000) {
+  simulated_T_values <- rbinom(num_simulations, n_triplets, p)
+  p_value <- mean(simulated_T_values >= Tobs)
+  return(p_value)
+}
+
+# Main execution function
+main <- function() {
+  digits <- load_pi_digits("data/pi.txt")
+  if (length(digits) >= 3) {
+    Tobs <- calculate_tallest_middle_triplets(digits)
+    n_triplets <- length(digits) %/% 3
+    
+    if (n_triplets > 0) {
+      Zobs <- calculate_zobs(Tobs, n_triplets)
+      p_value_clt <- pnorm(Zobs, lower.tail = FALSE)
+      p_value_permutation <- permutation_test(n_triplets, Tobs)
+      
+      cat("Observed T:", Tobs, "\n")
+      cat("Zobs:", Zobs, "\n")
+      cat("CLT P-value:", p_value_clt, "\n")
+      cat("Permutation Test P-value:", p_value_permutation, "\n")
+    } else {
+      cat("Not enough triplets to perform analysis.\n")
+    }
+  } else {
+    cat("Not enough digits loaded to analyze.\n")
+  }
+}
+
+main()
